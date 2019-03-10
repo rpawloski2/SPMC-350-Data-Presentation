@@ -1,0 +1,520 @@
+---
+title: "Is Mike Leach crazy?"
+subtitle: "By Ryan Pawloski"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+library(ggrepel)
+```
+
+```{r}
+library(rvest)
+```
+
+```{r}
+rushingoffense <- read_csv("~/Desktop/MidTerm/CFBRushingOffense - Sheet1.csv")
+```
+
+```{r}
+passingoffense <- read_csv("~/Desktop/MidTerm/CFBPassingOffense - Sheet1.csv")
+```
+
+```{r}
+totaloffense <- read_csv("~/Desktop/MidTerm/CFBTotalOffense - Sheet1.csv")
+```
+
+```{r}
+scoringoffense <- read_csv("~/Desktop/MidTerm/CFBScoringOffenseLogs - Sheet1.csv")
+```
+
+
+March 10, 2019
+
+Mike Leach's "Air Raid" offense is often criticized during press conferences for not being balanced. Before ending his sentences in coughs, Leach typically responds to those criticisms with ramblings about there being "nothing balanced about being 50 percent run, 50 percent pass because that's 50 percent stupid."
+
+Here's a look at how Leach calls plays throughout the past seven seasons.
+
+```{r}
+totaloffense %>% filter(Name == "Washington State") 
+```
+
+First, let's see how unbalanced Leach's offense truly is by calculating all FBS teams' pass and rush play differential. For this, we'll take the total amount of passing attempts and subtract them from rushing plays. We'll need to join our rushing and passing offense data together, then perform the calculation. 
+
+```{r}
+rushscore <- left_join(rushingoffense, scoringoffense, by=c("Season", "Name"))
+rushscore18 <- rushscore %>% filter(Season == "2018")
+```
+
+```{r}
+passscore <- left_join(passingoffense, scoringoffense, by=c("Season", "Name"))
+passscore18 <- passscore %>% filter(Season == "2018")
+```
+
+```{r}
+rushpassattempts <- left_join(rushscore18, passscore18, by=c("Name"))
+rushpassdifferential18 <- rushpassattempts %>% mutate(Differential = `Att.y` - `Att.x`)
+```
+
+```{r}
+rushpassdifferential18 %>% arrange(desc(Differential)) 
+```
+
+First let's define a pass-heavy team as one that has 100 or more pass attempts than rush. It's uncommon for an FBS team to be pass-heavy, as there are only six in the category. Teams 2-6 have a pass-rush attempt differential ranging from 100-190, while Washington State is in its own category with a differential of 396 plays.
+
+Applying the same concept to rush-heavy teams, there are 64 teams with a rush-pass differential of more than 100 plays, with Army owning the greatest rush-pass differential of 726 plays. The rest of the 60 teams in the FBS fall into the either favor rush or pass by less than 100 plays. 
+
+```{r}
+library(waffle)
+```
+
+```{r}
+wsu18 <- c("Rush"=278, "Pass"=677, 45)
+army18 <- c("Rush"=824, "Pass"=98, 78)
+```
+
+```{r}
+iron(
+  waffle(wsu18/15, rows = 4, colors = c("grey", "dark red", "white")) + labs(title = "Nothing balanced about No. 10 Washington State and No. 18 Army", subtitle = "Comparing the 2018 season play selection between polar opposites") + theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 10, face = "italic")
+  ),
+  waffle(army18/15, rows = 4, colors = c("gold", "black", "white"), xlab = "1 square = 15 plays") + labs(caption = "Source: Sports-Reference.com | By Ryan Pawloski") + theme(
+    axis.title = element_text(size = 10, face = "italic")
+  ))
+```
+
+Let's look at this visually through a graph. We'll highlight the two leaders in Washington State and Army, along with the final AP Top 5 teams in 2018 to see where they stand.
+
+```{r}
+wsuattempts <- rushpassattempts %>% filter(Name == "Washington State")
+armyattempts <- rushpassattempts %>% filter(Name == "Army")
+clemattempts <- rushpassattempts %>% filter(Name == "Clemson")
+bamaattempts <- rushpassattempts %>% filter(Name == "Alabama")
+osuattempts <- rushpassattempts %>% filter(Name == "Ohio State")
+ouattempts <- rushpassattempts %>% filter(Name == "Oklahoma")
+ndattempts <- rushpassattempts %>% filter(Name == "Notre Dame")
+```
+
+```{r}
+ggplot(data = rushpassattempts, aes(x=`Att.x`,y=`Att.y`)) + 
+  geom_point(color="grey") + 
+  geom_point(data = wsuattempts, aes(x=`Att.x`, y=`Att.y`), color="black") + 
+  geom_text(data = wsuattempts, aes(x=`Att.x`, y=`Att.y`), label="Wash. St.") + 
+  geom_point(data = armyattempts, aes(x=`Att.x`, y=`Att.y`), color="gold") + 
+  geom_text(data = armyattempts, aes(x=`Att.x`, y=`Att.y`), label="Army") +
+  geom_point(data = clemattempts, aes(x=`Att.x`, y=`Att.y`), color="orange") + 
+  geom_text(data = clemattempts, aes(x=`Att.x`, y=`Att.y`), label="Clemson") + 
+  geom_point(data = bamaattempts, aes(x=`Att.x`, y=`Att.y`), color="dark red") + 
+  geom_text(data = bamaattempts, aes(x=`Att.x`, y=`Att.y`), label="Alabama") +
+  geom_point(data = osuattempts, aes(x=`Att.x`, y=`Att.y`), color="red") + 
+  geom_text(data = osuattempts, aes(x=`Att.x`, y=`Att.y`), label="Ohio State") + 
+  geom_point(data = ouattempts, aes(x=`Att.x`, y=`Att.y`), color="dark red") + 
+  geom_text(data = ouattempts, aes(x=`Att.x`, y=`Att.y`), label="Oklahoma") +
+  geom_point(data = ndattempts, aes(x=`Att.x`, y=`Att.y`), color="green") + 
+  geom_text(data = ndattempts, aes(x=`Att.x`, y=`Att.y`), label="Notre Dame") +
+  labs(x="Rush Plays", y="Pass Plays", title = "Washington State alone in heavily favoring pass over rush", subtitle = "While most of college football is either balanced or heavily favors rushing over passing", caption = "Source: Sports-Reference.com | By Ryan Pawloski") + theme_minimal() + theme(
+    plot.title = element_text(size = 14, face = "bold"), 
+    axis.title = element_text(size = 8),
+    plot.subtitle = element_text(size = 10, face = "italic"))
+```
+
+The top five teams being in the cluster that's either balanced or rush-heavy isn't too surprising. Like mentioned before, it's common in college football to run the ball more than pass it.
+
+Part of the reason for that is because the forward pass wasn't a thing until President Theodore Roosevelt demanded it in 1905 after 18 football-related deaths nationwide (Athlon Sports, 2016). Another reason is that it's common to believe that teams who are balanced and run the ball more, are better offensively. 
+
+But does it really matter? Is the pirate over in Pullman, Washington not crazy for not buying-in to what many involved in this sport believe?
+
+To solve this question, let's go back to the 2008 season, where Leach's Texas Tech Red Raiders finished No. 12 in the AP Top 25. Compared to the rest of the teams ahead of him, they were very rush heavy, including national champion Florida.
+
+```{r}
+Top102008 <- read_csv("~/Desktop/MidTerm/Top102008Logs - Sheet1.csv")
+```
+
+```{r}
+Top102008Differentials <- Top102008 %>% mutate(Differential = PassAtt - RushAtt) %>% group_by(Team) %>% mutate(CumDiff = cumsum(Differential))
+```
+
+```{r}
+ttu2008 <- Top102008Differentials %>% filter(Team == "Texas Tech")
+uf2008 <- Top102008Differentials %>% filter(Team == "Florida")
+utah2008 <- Top102008Differentials %>% filter(Team == "Utah")
+usc2008 <- Top102008Differentials %>% filter(Team == "USC")
+```
+
+```{r}
+ggplot() + geom_step(data = Top102008Differentials, aes(x=Date, y=CumDiff, group=Team), color="light grey") + geom_step(data = ttu2008, aes(x=Date, y=CumDiff, group=Team), color="black") + 
+  geom_step(data = uf2008, aes(x=Date, y=CumDiff, group=Team), color="blue") + 
+  geom_step(data = utah2008, aes(x=Date, y=CumDiff, group=Team), color="red") + 
+  geom_step(data = usc2008, aes(x=Date, y=CumDiff, group=Team), color="dark red") + 
+  annotate("text", x=as.Date("2008-12-15"), y=320, label="No. 12 Texas Tech") +  
+  annotate("text", x=as.Date("2008-12-28"), y=-220, label="No. 1 Florida", color="blue") + 
+  annotate("text", x=as.Date("2008-12-23"), y=-80, label="No. 2 Utah", color="red") + 
+  annotate("text", x=as.Date("2008-12-20"), y=-130, label="No. 3 USC", color="dark red") + 
+  labs(x="Date", y="Cumulative Pass-Rush Attempt Differential", title="Mike Leach's play selection in 2008 compared to AP Top 12 teams", subtitle ="The 2008 Red Raiders' cumulative difference of passing over rushing play selection differs from the rest", caption = "Source: Sports-Reference.com | By Ryan Pawloski") + theme_minimal() + theme(
+    plot.title = element_text(size = 14, face = "bold"), 
+    axis.title = element_text(size = 8),
+    plot.subtitle = element_text(size = 10, face = "italic")
+  )
+```
+
+Looking at this step chart makes one wonder if Leach knows something that the rest of us don't, as he's going in the complete opposite direction of the rest of the teams ahead of him in play selection.
+
+Leach's play selection hasn't changed much 10 years later. 
+
+```{r}
+Top10Logs <- read_csv("~/Desktop/MidTerm/Top102018Logs - Sheet1.csv")
+```
+
+```{r}
+Top10Differentials <- Top10Logs %>% mutate(Differential = PassAtt - RushAtt) %>% group_by(Team) %>% mutate(CumDiff = cumsum(Differential))
+```
+
+```{r}
+wsudifferential <- Top10Differentials %>% filter(Team == "Washington State")
+bamadifferential <- Top10Differentials %>% filter(Team == "Alabama")
+clemdifferential <- Top10Differentials %>% filter(Team == "Clemson")
+osudifferential <- Top10Differentials %>% filter(Team == "Ohio State")
+```
+
+```{r}
+ggplot() + geom_step(data = Top10Differentials, aes(x=Date, y=CumDiff, group=Team), color="light grey") + geom_step(data = wsudifferential, aes(x=Date, y=CumDiff, group=Team), color="black") + 
+  geom_step(data = bamadifferential, aes(x=Date, y=CumDiff, group=Team), color="dark red") + 
+  geom_step(data = clemdifferential, aes(x=Date, y=CumDiff, group=Team), color="orange") + 
+  geom_step(data = osudifferential, aes(x=Date, y=CumDiff, group=Team), color="red") + 
+  annotate("text", x=as.Date("2018-12-08"), y=385, label="No. 10 Washington State") +  
+  annotate("text", x=as.Date("2018-12-15"), y=0, label="No. 3 Ohio State", color="red") + 
+  annotate("text", x=as.Date("2018-12-15"), y=-50, label="No. 1 Clemson", color="orange") + 
+  annotate("text", x=as.Date("2018-12-15"), y=-100, label="No. 2 Alabama", color="dark red") + 
+  labs(x="Date", y="Cumulative Pass-Rush Attempt Differential", title="Mike Leach still not balanced among AP Top 12 teams a decade later", subtitle ="The Cougars' 2018 pass-rush cumulative difference was 399 , Ohio State second with -10 difference", caption = "Source: Sports-Reference.com | By Ryan Pawloski") + theme_minimal() + theme_minimal() + theme(
+    plot.title = element_text(size = 14, face = "bold"), 
+    axis.title = element_text(size = 8),
+    plot.subtitle = element_text(size = 10, face = "italic"))
+```
+
+Leach's play-calling has led him, and any coach or player associated with him, to produce some of the top passing teams in the country.
+
+```{r}
+passingoffense <- read_csv("~/Desktop/MidTerm/CFBPassingOffense - Sheet1.csv")
+```
+
+```{r}
+WSUPassYardsPG <- passingoffense %>% filter(Name == "Washington State")
+TTUPassYardsPG <- passingoffense %>% filter(Name == "Texas Tech")
+BamaPassYardsPG <- passingoffense %>% filter(Name == "Alabama")
+ClemsonPassYardsPG <- passingoffense %>% filter(Name == "Clemson")
+OhioStatePassYardsPG <- passingoffense %>% filter(Name == "Ohio State")
+FSUPassYardsPG <- passingoffense %>% filter(Name == "Florida State")
+AuburnPassYardsPG <- passingoffense %>% filter(Name == "Auburn")
+armypassyardsPG <- passingoffense %>% filter(Name == "Army")
+```
+
+```{r}
+ggplot() + geom_line(data = passingoffense, aes(x=Season, y=`Yards/G`, group=Name), color="light grey") + geom_line(data = WSUPassYardsPG, aes(x=Season, y=`Yards/G`, group=Name), color="black") + 
+  geom_line(data = BamaPassYardsPG, aes(x=Season, y=`Yards/G`, group=Name), color="dark red") + 
+  geom_line(data = ClemsonPassYardsPG, aes(x=Season, y=`Yards/G`, group=Name), color="purple") + 
+  geom_line(data = OhioStatePassYardsPG, aes(x=Season, y=`Yards/G`, group=Name), color="red") + 
+  geom_line(data = FSUPassYardsPG, aes(x=Season, y=`Yards/G`, group=Name), color="gold") + 
+  geom_line(data = AuburnPassYardsPG, aes(x=Season, y=`Yards/G`, group=Name), color="blue") +
+  annotate("text",x=2010.25, y=125, label="Ohio State", color="red") + 
+  annotate("text",x=2017, y=385, label="Washington State", color="black") + 
+  annotate("text",x=2015.75, y=300, label="Clemson", color="purple") + 
+  annotate("text",x=2011.5, y=230, label="Alabama", color="dark red") + 
+  annotate("text",x=2014, y=325, label="Florida State", color="gold") + 
+  annotate("text",x=2012.5, y=140, label="Auburn", color="blue") + 
+  labs(x="Seasons",y="Average Passing Yards Per Game", title = "Leach's Air Raid Attack sets itself apart from the FBS", subtitle = "Leach's Cougars (2012-present) compared to the five programs to win National Championship since 2009", caption = "Source: cfbstats.com | By Ryan Pawloski") + theme_minimal() + theme(
+    plot.title = element_text(size = 16, face = "bold"), 
+    axis.title = element_text(size = 8),
+    plot.subtitle = element_text(size = 10, face = "italic"))
+```
+
+Leach has coached five team's over the last 10 seasons to be in the top 25 for passing yards per game, which is impressive knowing that he didn't coach for two full seasons and took over a horrible Washington State team.
+
+```{r}
+passt25rank <- read_csv("~/Desktop/MidTerm/CFBPassingOffenseRank - Sheet1.csv")
+```
+
+```{r}
+passingoffensetop25 <- passt25rank %>% arrange(desc(`Yards/G`)) %>% top_n(25)
+```
+
+```{r}
+ggplot(passingoffensetop25, aes(x=reorder(Name, `Yards/G`), weight=`Yards/G`)) + geom_bar() + scale_y_continuous() + coord_flip() + labs(x="FBS Division I College Football Programs",y="Season Average Pass Yards Per Game", title = "Top 25 Teams in Pass Yards Per Game since 2009", subtitle = "Leach led six of the teams in this list, with eight additional appearances coming from his coaching tree", caption = "Source: cfbstats.com | By Ryan Pawloski") + theme_minimal() + theme(
+    plot.title = element_text(size = 16, face = "bold"), 
+    axis.title = element_text(size = 8),
+    plot.subtitle = element_text(size = 9, face = "italic")) 
+```
+
+Leach is also connected to the eight other appearances in this list, as former his assistants in Art Briles, Sonny Dykes, Greg McMackin, Ruffin McNeill and former player Kliff Kingsbury each led their ex-teams to domination through the air. 
+
+Despite the success in passing, Leach's rushing numbers have been among the worst in the country, altough he probably doesn't care.
+
+```{r}
+rushingoffense <- read_csv("~/Desktop/MidTerm/CFBRushingOffense - Sheet1.csv")
+```
+
+```{r}
+wsurushing18 <- rushingoffense %>% filter(Name=="Washington State")
+fsurushing18 <- rushingoffense %>% filter(Name=="Florida State")
+bamarushing18 <- rushingoffense %>% filter(Name=="Alabama")
+clemrushing18 <- rushingoffense %>% filter(Name=="Clemson")
+osurushing18 <- rushingoffense %>% filter(Name=="Ohio State")
+auburnrushing18 <- rushingoffense %>% filter(Name=="Auburn")
+```
+
+```{r}
+ggplot() + geom_line(data = rushingoffense, aes(x=Season, y=`Yards/G`, group=Name), color="light grey") + geom_line(data = wsurushing18, aes(x=Season, y=`Yards/G`, group=Name), color="black") + 
+  geom_line(data = bamarushing18, aes(x=Season, y=`Yards/G`, group=Name), color="dark red") + 
+  geom_line(data = clemrushing18, aes(x=Season, y=`Yards/G`, group=Name), color="purple") + 
+  geom_line(data = osurushing18, aes(x=Season, y=`Yards/G`, group=Name), color="red") + 
+  geom_line(data = fsurushing18, aes(x=Season, y=`Yards/G`, group=Name), color="gold") +   
+  geom_line(data = auburnrushing18, aes(x=Season, y=`Yards/G`, group=Name), color="blue") + 
+  annotate("text",x=2015.25, y=260, label="Ohio State", color="red") + 
+  annotate("text",x=2015.95, y=70, label="Washington State", color="black") + 
+  annotate("text",x=2016, y=160, label="Clemson", color="purple") + 
+  annotate("text",x=2014, y=220, label="Alabama", color="dark red") + 
+  annotate("text",x=2014, y=125, label="Florida State", color="gold") + 
+  annotate("text",x=2010, y=295, label="Auburn", color="blue") + 
+  labs(x="Seasons",y="Average Rushing Yards Per Game", title = "Cougars among worst in rushing since Leach hired in 2012", subtitle = "Washington State has only averaged more than 100 rush yards per game once in Leach's seven seasons", caption = "Source: cfbstats.com | By Ryan Pawloski") + theme_minimal() + theme(
+    plot.title = element_text(size = 16, face = "bold"), 
+    axis.title = element_text(size = 8),
+    plot.subtitle = element_text(size = 10, face = "italic"))
+```
+
+It's noticeable through the two line graphs that the five programs to win a national championship have stayed relatively consistent in the middle, or in the upper-half of the FBS in rushing. 
+
+This sparks the question if being a balanced, rush-heavy team is the correct way to run a successfull program. Let's look at the 2018 season to figure this out.
+
+```{r}
+scoringoffense <- read_csv("~/Desktop/MidTerm/CFBScoringOffenseLogs - Sheet1.csv")
+```
+
+
+Looking at the top 25 teams in offensive points per game, Washington State ranks 15th in the country. How does its rushing average compare with its scoring average? 
+
+```{r}
+scoringoffense %>% filter(Season == "2018") %>% arrange(desc(Points/G)) %>% top_n(25)
+```
+
+```{r}
+rushscore <- left_join(rushingoffense, scoringoffense, by=c("Season", "Name"))
+rushscore18 <- rushscore %>% filter(Season == "2018")
+CUrushscore <- rushscore18 %>% filter(Name == "Clemson")
+UArushscore <- rushscore18 %>% filter(Name == "Alabama")
+OUrushscore <- rushscore18 %>% filter(Name == "Oklahoma")
+NDrushscore <- rushscore18 %>% filter(Name == "Notre Dame")
+WSUrushscore <- rushscore18 %>% filter(Name == "Washington State")
+osurushscore <- rushscore18 %>% filter(Name == "Ohio State")
+```
+
+```{r}
+ggplot(data = rushscore18, aes(x=`Yards/G`, y=`Points/G`)) + 
+  geom_point(color="grey") + geom_smooth(method = lm, se=FALSE) + 
+  geom_point(data = CUrushscore, aes(x=`Yards/G`, y=`Points/G`), color="orange") + 
+  geom_text(data = CUrushscore, aes(x=`Yards/G`, y=`Points/G`), label="Clemson") + 
+  geom_point(data = UArushscore, aes(x=`Yards/G`, y=`Points/G`), color="dark red") + 
+  geom_text(data = UArushscore, aes(x=`Yards/G`, y=`Points/G`), label="Alabama") + 
+  geom_point(data = OUrushscore, aes(x=`Yards/G`, y=`Points/G`), color="dark red") + 
+  geom_text(data = OUrushscore, aes(x=`Yards/G`, y=`Points/G`), label="Oklahoma") + 
+  geom_point(data = NDrushscore, aes(x=`Yards/G`, y=`Points/G`), color="green") + 
+  geom_text(data = NDrushscore, aes(x=`Yards/G`, y=`Points/G`), label="Notre Dame") + 
+  geom_point(data = WSUrushscore, aes(x=`Yards/G`, y=`Points/G`), color="red") + 
+  geom_text(data = WSUrushscore, aes(x=`Yards/G`, y=`Points/G`), label="Washington State") +
+  geom_point(data = osurushscore, aes(x=`Yards/G`, y=`Points/G`), color="red") + 
+  geom_text(data = osurushscore, aes(x=`Yards/G`, y=`Points/G`), label="Ohio State") + labs(x="Offensive Rush Yards Per Game", y="Offensive Points Per Game", title = "Washington State second-worst in rushing, but No. 15 in scoring", subtitle = "The Cougars averaged about 78 yards per game in 2018, ranking 129th in the nation", caption = "Source: cfbstats.com | By Ryan Pawloski") + theme_minimal() + theme(
+    plot.title = element_text(size = 14, face = "bold"), 
+    axis.title = element_text(size = 8),
+    plot.subtitle = element_text(size = 10, face = "italic")) 
+```
+
+Since the Cougars never run the ball, they are the second-worst program in the country in rushing. Not surprising due to their passing numbers, they are outscoring their rushing numbers by a large margin. 
+
+HOW LEACH'S PASSING YARDS PER GAME/POINTS PER GAME COMPARED WITH PLAYOFF CONTENDERS
+
+```{r}
+passingoffense <- read_csv("~/Desktop/MidTerm/CFBPassingOffense - Sheet1.csv")
+```
+
+```{r}
+passscore <- left_join(passingoffense, scoringoffense, by=c("Season", "Name"))
+passscore18 <- passscore %>% filter(Season == "2018")
+CUpassscore <- passscore18 %>% filter(Name == "Clemson")
+UApassscore <- passscore18 %>% filter(Name == "Alabama")
+OUpassscore <- passscore18 %>% filter(Name == "Oklahoma")
+NDpassscore <- passscore18 %>% filter(Name == "Notre Dame")
+WSUpassscore <- passscore18 %>% filter(Name == "Washington State")
+osupassscore <- passscore18 %>% filter(Name == "Ohio State")
+```
+
+```{r}
+ggplot(data = passscore18, aes(x=`Yards/G`, y=`Points/G`)) + 
+  geom_point(color="grey") + geom_smooth(method = lm, se=FALSE) + 
+  geom_point(data = CUpassscore, aes(x=`Yards/G`, y=`Points/G`), color="orange") + 
+  geom_text(data = CUpassscore, aes(x=`Yards/G`, y=`Points/G`), label="Clemson") + 
+  geom_point(data = UApassscore, aes(x=`Yards/G`, y=`Points/G`), color="dark red") + 
+  geom_text(data = UApassscore, aes(x=`Yards/G`, y=`Points/G`), label="Alabama") + 
+  geom_point(data = WSUpassscore, aes(x=`Yards/G`, y=`Points/G`), color="red") + 
+  geom_point(data = OUpassscore, aes(x=`Yards/G`, y=`Points/G`), color="dark red") + 
+  geom_text(data = OUpassscore, aes(x=`Yards/G`, y=`Points/G`), label="Oklahoma") + 
+  geom_point(data = NDpassscore, aes(x=`Yards/G`, y=`Points/G`), color="green") + 
+  geom_text(data = NDpassscore, aes(x=`Yards/G`, y=`Points/G`), label="Notre Dame") + 
+  geom_point(data = WSUpassscore, aes(x=`Yards/G`, y=`Points/G`), color="red") + 
+  geom_text(data = WSUpassscore, aes(x=`Yards/G`, y=`Points/G`), label="Wash. St.") + 
+  geom_point(data = osupassscore, aes(x=`Yards/G`, y=`Points/G`), color="red") + 
+  geom_text(data = osupassscore, aes(x=`Yards/G`, y=`Points/G`), label="Ohio State") + 
+  labs(x="Offensive Pass Yards Per Game", y="Offensive Points Per Game", title = "Comparing Washington State to the final AP Top 5 teams", subtitle = "Cougars about the same as the Buckeyes in passing, but scoring a hair less than what they should be", caption = "Source: Sports-Reference.com | By Ryan Pawloski") + theme_minimal() + theme(
+    plot.title = element_text(size = 14, face = "bold"), 
+    axis.title = element_text(size = 8),
+    plot.subtitle = element_text(size = 10, face = "italic"))
+```
+
+Washington State is scoring a tad bit less than what it should be scoring with the amount passing yards it produces per game. Why is that? 
+
+I'm no expert in the play-calling aspect of football, but I do wonder if an air raid attack is effective in the red zone. Any team can score field goals in the red zone, so including them to the equation won't tell the full story. Therefore, this equation will only measure rush/pass yards per game and red zone touchdown conversion efficiency.
+
+Let's first look at how rushing performance affects at team's chances at scoring touchdowns in the red zone. Along with the top five teams and Washington State, I highlighted the top five teams who run the ball more than passing (Army, Georgia Tech, Navy, Air Force and Georgia Southern).
+
+```{r}
+redszonescoring <- read_csv("~/Desktop/MidTerm/CFBRedZoneScoring2018 - Sheet1.csv")
+```
+
+```{r}
+rushing_redzone <- left_join(redszonescoring, rushscore18, by=c("Name"))
+wsuredzonescorerush <- rushing_redzone %>% filter(Name == "Washington State")
+clemredzonerush <-  rushing_redzone %>% filter(Name == "Clemson")
+bamaredzonerush <- rushing_redzone %>% filter(Name == "Alabama")
+ouredzonerush <- rushing_redzone %>% filter(Name == "Oklahoma")
+ndredzonerush <- rushing_redzone %>% filter(Name == "Notre Dame")
+osuredzonerush <- rushing_redzone %>% filter(Name == "Ohio State")
+gtredzonerush <- rushing_redzone %>% filter(Name == "Georgia Tech")
+armyredzonerush <- rushing_redzone %>% filter(Name == "Army")
+navyredzonerush <- rushing_redzone %>% filter(Name == "Navy")
+afredzonerush <- rushing_redzone %>% filter(Name == "Air Force")
+gsuredzonerush <- rushing_redzone %>% filter(Name == "Georgia Southern")
+osuredzonerush <- rushing_redzone %>% filter(Name == "Ohio State")
+```
+
+```{r}
+ggplot(data = rushing_redzone, aes(x=`Yards/G`,y=`TD %`)) + 
+  geom_point(color="grey") + geom_smooth(method = lm, se=FALSE) + 
+  geom_point(data = wsuredzonescorerush, aes(x=`Yards/G`, y=`TD %`), color="black") + 
+  geom_point(data = clemredzonerush, aes(x=`Yards/G`, y=`TD %`), color="orange") + 
+  geom_point(data = bamaredzonerush, aes(x=`Yards/G`, y=`TD %`), color="dark red") + 
+  geom_point(data = ouredzonerush, aes(x=`Yards/G`, y=`TD %`), color="red") + 
+  geom_point(data = ndredzonerush, aes(x=`Yards/G`, y=`TD %`), color="green") + 
+  geom_point(data = osuredzonerush, aes(x=`Yards/G`, y=`TD %`), color="red") + 
+  geom_text(data = wsuredzonescorerush, aes(x=`Yards/G`, y=`TD %`), label="Wash. St.") + 
+  geom_text(data = clemredzonerush, aes(x=`Yards/G`, y=`TD %`), label="Clemson") + 
+  geom_text(data = bamaredzonerush, aes(x=`Yards/G`, y=`TD %`), label="Alabama") + 
+  geom_text(data = ouredzonerush, aes(x=`Yards/G`, y=`TD %`), label="Oklahoma") + 
+  geom_text(data = ndredzonerush, aes(x=`Yards/G`, y=`TD %`), label="Notre Dame") +
+  geom_text(data = osuredzonerush, aes(x=`Yards/G`, y=`TD %`), label="Ohio State") +
+  geom_point(data = gtredzonerush, aes(x=`Yards/G`, y=`TD %`), color="gold") + 
+  geom_point(data = armyredzonerush, aes(x=`Yards/G`, y=`TD %`), color="gold") + 
+  geom_point(data = navyredzonerush, aes(x=`Yards/G`, y=`TD %`), color="dark blue") + 
+  geom_point(data = afredzonerush, aes(x=`Yards/G`, y=`TD %`), color="blue") + 
+  geom_point(data = gsuredzonerush, aes(x=`Yards/G`, y=`TD %`), color="dark blue") + 
+  geom_text(data = gtredzonerush, aes(x=`Yards/G`, y=`TD %`), label="Georgia Tech", color="blue") + 
+  geom_text(data = armyredzonerush, aes(x=`Yards/G`, y=`TD %`), label="Army", color="blue") + 
+  geom_text(data = navyredzonerush, aes(x=`Yards/G`, y=`TD %`), label="Navy", color="blue") + 
+  geom_text(data = afredzonerush, aes(x=`Yards/G`, y=`TD %`), label="Air Force", color="blue") + 
+  geom_text(data = gsuredzonerush, aes(x=`Yards/G`, y=`TD %`), label="Georgia Southern", color="blue") +
+  labs(x="Offensive Rush Yards Per Game", y="Red Zone Touchdown Scoring Percentage", title = "Correlation between red zone scoring and rushing performance", subtitle = "Cougars not running the ball, but that won't stop them from scoring with a short field", caption = "Source: Sports-Reference.com | By Ryan Pawloski") + theme_minimal() + theme(
+    plot.title = element_text(size = 14, face = "bold"), 
+    axis.title = element_text(size = 8),
+    plot.subtitle = element_text(size = 10, face = "italic"))
+```
+
+There appears to be a correlation between a team's overall rushing performance and its success in scoring touchdowns in the red zone. It helps that 104 out of 130 FBS teams have a cumulativily rush the ball more than pass. 64 of those team's are rush-heavy
+
+The Washington State Cougars are a clear outlier when it comes to this, as they are among the best in the country when it comes to scoring touchdowns inside the red zone. Like I did for rushing, let's how the top five teams outside of Washington State who throw the ball over rushing perform in the red zone (Washington State, New Mexico State, East Carolina, Hawai'i, Colorado State, Purdue and Texas Tech).
+
+```{r}
+passing_redzone <- left_join(redszonescoring, passscore18, by=c("Name"))
+wsuredzonescore <- passing_redzone %>% filter(Name == "Washington State")
+clemredzone <-  passing_redzone %>% filter(Name == "Clemson")
+bamaredzone <- passing_redzone %>% filter(Name == "Alabama")
+ouredzone <- passing_redzone %>% filter(Name == "Oklahoma")
+ndredzone <- passing_redzone %>% filter(Name == "Notre Dame")
+osuredzone <- passing_redzone %>% filter(Name == "Ohio State")
+nmsuredzone <- passing_redzone %>% filter(Name == "New Mexico State")
+ecuredzone <- passing_redzone %>% filter(Name == "East Carolina")
+hawaiiredzone <- passing_redzone %>% filter(Name == "Hawai'i")
+csuredzone <- passing_redzone %>% filter(Name == "Colorado State")
+purdueredzone <- passing_redzone %>% filter(Name == "Purdue")
+```
+
+```{r}
+ggplot(data = passing_redzone, aes(x=`Yards/G`,y=`TD %`)) + 
+  geom_point(color="grey") + geom_smooth(method = lm, se=FALSE) + 
+  geom_point(data = wsuredzonescore, aes(x=`Yards/G`, y=`TD %`), color="dark red") + 
+  geom_point(data = clemredzone, aes(x=`Yards/G`, y=`TD %`), color="orange") + 
+  geom_point(data = bamaredzone, aes(x=`Yards/G`, y=`TD %`), color="dark red") + 
+  geom_point(data = ouredzone, aes(x=`Yards/G`, y=`TD %`), color="dark red") + 
+  geom_point(data = ndredzone, aes(x=`Yards/G`, y=`TD %`), color="green") + 
+  geom_point(data = osuredzone, aes(x=`Yards/G`, y=`TD %`), color="red") + 
+  geom_text(data = wsuredzonescore, aes(x=`Yards/G`, y=`TD %`), label="Wash. St.") + 
+  geom_text(data = clemredzone, aes(x=`Yards/G`, y=`TD %`), label="Clemson") + 
+  geom_text(data = bamaredzone, aes(x=`Yards/G`, y=`TD %`), label="Alabama") + 
+  geom_text(data = ouredzone, aes(x=`Yards/G`, y=`TD %`), label="Oklahoma") + 
+  geom_text(data = ndredzone, aes(x=`Yards/G`, y=`TD %`), label="Notre Dame") + 
+  geom_text(data = osuredzone, aes(x=`Yards/G`, y=`TD %`), label="Ohio State") + 
+  geom_point(data = nmsuredzone, aes(x=`Yards/G`, y=`TD %`), color="dark red") + 
+  geom_point(data = ecuredzone, aes(x=`Yards/G`, y=`TD %`), color="purple") + 
+  geom_point(data = hawaiiredzone, aes(x=`Yards/G`, y=`TD %`), color="dark green") + 
+  geom_point(data = csuredzone, aes(x=`Yards/G`, y=`TD %`), color="dark green") + 
+  geom_point(data = purdueredzone, aes(x=`Yards/G`, y=`TD %`), color="gold") + 
+  geom_text(data = nmsuredzone, aes(x=`Yards/G`, y=`TD %`), label="New Mexico State", color="blue") + 
+  geom_text(data = ecuredzone, aes(x=`Yards/G`, y=`TD %`), label="East Carolina", color="blue") + 
+  geom_text(data = hawaiiredzone, aes(x=`Yards/G`, y=`TD %`), label="Hawai'i", color="blue") + 
+  geom_text(data = csuredzone, aes(x=`Yards/G`, y=`TD %`), label="Colorado State", color="blue") + 
+  geom_text(data = purdueredzone, aes(x=`Yards/G`, y=`TD %`), label="Purdue", color="blue") + 
+  labs(x="Offensive Pass Yards Per Game",y="Red Zone Touchdown Scoring Percentage", title = "No correlation between passing performance and touchdowns in red zone", subtitle = "However, Washington State conversion percentage is higher than the top five rush-heavy teams", caption = "Source: Sports-Reference.com | By Ryan Pawloski") + theme_minimal() + theme(
+    plot.title = element_text(size = 14, face = "bold"), 
+    axis.title = element_text(size = 8),
+    plot.subtitle = element_text(size = 10, face = "italic"))
+```
+
+So there is no correlation between passing performance and red zone touchdown conversion like there is for rushing perforamance. But that doesn't mean that running the ball gives you a better chance at converting a touchdown in the red zone more than passing. Washington State is the fourth-best team at converting touchdowns in the red zone. Washington State has about a 78 percent conversion percentage, sitting about two percentage points behind No. 1 UCF at about 80 percent.
+
+```{r}
+redszonescoring %>% arrange(desc(`TD %`)) 
+```
+
+The reaason passing doesn't appear as efficient at scoring in the red zone is because Washington State is the only team that has a cumulative pass-rush difference of 396 plays. The next highest team with that difference is New Mexico State with a 183 play difference. 
+
+For rushing, there are 28 teams with a cumulative rush-pass difference greater than 200 plays, which plays a huge factor.
+
+```{r}
+library(knitr)
+```
+
+```{r}
+library(gridExtra)
+knitr::opts_chunk
+```
+
+```{r fig.height=10, fig.width=5}
+ggplot(rushpassdifferential18, aes(x=reorder(Name, Differential), weight=Differential)) + geom_bar() + coord_flip() + labs(x="FBS Division I College Football Programs",y="2018 season difference between pass and rush attempts", title = "If Leach were running the ball instead, he'd be normal", subtitle = "Leach heavily favors the forward pass, but not as much as the rest love running the ball", caption = "Source: cfbstats.com | By Ryan Pawloski") + theme_minimal() + theme(
+    plot.title = element_text(size = 14, face = "bold"), 
+    axis.title = element_text(size = 10),
+    plot.subtitle = element_text(size = 10, face = "italic")) + ggsave("plot.pdf", width=5, height=10)
+```
+
+
+If Leach were calling plays like the coaches on the opposite end of the spectrum, his play-calling wouldn't seem as odd. Not enough teams are calling plays like Leach for there to be any correlation between passing performance and red zone scoring. On the other end, there are plenty of teams with a rush-pass attempt differential that's greater than 200 attempts, while Washington State is the only team that crosses that mark with passing.
+
+The Washington State Cougars are the only team that fully-commits to passing the ball, and their stats back them up in showing the style to be productive. If more teams were playing like Washington State, like the same way many teams heavily-favor rushing, would it look the same?
+
+Based on the information studied, Washington State is the model for how the best pass-heavy team should look in scoring. In fact, Washington State is among the best at scoring touchdowns in short field situations. Which is kind of surprising due to a perception that rushing teams fair better in short-field situations.
+
+That's where Leach has it right in saying there's no difference between passing and rushing. If a team is good a doing one thing over the other, then fully commit to it like both Leach and the military schools.
+
+Overall, Leach historically has talented teams that finish high in the polls. He does this with low-profile teams like Texas Tech and Washington State, which makes you wonder what he would do at a bigger program with more resources. 
+
+Ryan Pawloski (2019)
+Sources: sports-reference.com and cfbstats.com
